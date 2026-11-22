@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Stack Tracker • Denní Dávkování</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card: #151f32;
+      --card-muted: #111827;
+      --border: #26334d;
+      --text: #f1f5f9;
+      --text-dim: #94a3b8;
+      --accent: #10b981;
+      --accent-glow: rgba(16, 185, 129, 0.2);
+      --warn: #f59e0b;
+      --pause: #64748b;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      padding: 16px 14px 48px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.4;
+      max-width: 540px;
+      margin-inline: auto;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    h1 {
+      font-size: 1.25rem;
+      margin: 0;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .subtitle {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+    .cycle-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .cycle-info { display: flex; flex-direction: column; gap: 3px; }
+    .cycle-badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      width: fit-content;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge-active { background: var(--accent-glow); color: var(--accent); border: 1px solid rgba(16,185,129,0.4); }
+    .badge-pause { background: rgba(245, 158, 11, 0.15); color: var(--warn); border: 1px solid rgba(245,158,11,0.4); }
+    .cycle-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-icon {
+      background: #1e293b;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      width: 34px;
+      height: 34px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-icon:active { transform: scale(0.95); }
+
+    .days-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .day-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      border-radius: 12px;
+      padding: 9px 0;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+    .day-btn .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .day-btn.weekend .dot { background: var(--warn); }
+    .day-btn.active {
+      background: #1e293b;
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+    .day-btn.weekend.active {
+      border-color: var(--warn);
+      box-shadow: 0 0 0 1px var(--warn);
+    }
+
+    .mode-bar {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 11px 14px;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 26px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #334155;
+      transition: .2s;
+      border-radius: 999px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--accent); }
+    input:checked + .slider:before { transform: translateX(22px); }
+
+    .progress-wrap {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+    }
+    .progress-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .progress-bar {
+      height: 9px;
+      background: #1e293b;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #10b981, #34d399);
+      transition: width 0.25s ease;
+    }
+
+    .section-title {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-dim);
+      font-weight: 700;
+      margin: 16px 2px 8px;
+    }
+    .item-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 13px 14px;
+      margin-bottom: 9px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, opacity 0.15s;
+    }
+    .item-card.checked {
+      border-color: rgba(16, 185, 129, 0.5);
+      background: rgba(16, 185, 129, 0.06);
+    }
+    .item-card.paused {
+      background: var(--card-muted);
+      opacity: 0.62;
+      cursor: default;
+    }
+    .checkbox {
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      border: 2px solid #475569;
+      flex-shrink: 0;
+      margin-top: 1px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.9rem;
+      color: #0b1120;
+    }
+    .item-card.checked .checkbox {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .item-card.paused .checkbox {
+      border-color: #334155;
+      color: var(--warn);
+      font-size: 0.75rem;
+    }
+    .item-body { flex: 1; }
+    .item-name {
+      font-weight: 700;
+      font-size: 0.96rem;
+      margin-bottom: 2px;
+    }
+    .item-card.checked .item-name {
+      text-decoration: line-through;
+      color: var(--text-dim);
+    }
+    .item-dose {
+      font-size: 0.83rem;
+      color: #cbd5e1;
+    }
+    .item-note {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+    .pause-pill {
+      display: inline-block;
+      margin-top: 5px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--warn);
+      background: rgba(245, 158, 11, 0.14);
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+    .footer-actions {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+    }
+    .btn-reset {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 9px 16px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>Vitality & NO Stack</h1>
+      <div class="subtitle" id="statusSubtitle">Režim 5+2 • Offline aplikace</div>
+    </div>
+  </header>
+
+  <div class="cycle-box">
+    <div class="cycle-info">
+      <div style="font-weight:700; font-size:0.95rem;">Týden cyklu: <span id="weekLabel">1</span> / 8</div>
+      <span id="cycleBadge" class="cycle-badge badge-active">Aktivní fáze (Po–Pá)</span>
+    </div>
+    <div class="cycle-controls">
+      <button class="btn-icon" onclick="changeWeek(-1)" aria-label="Předchozí týden">−</button>
+      <button class="btn-icon" onclick="changeWeek(1)" aria-label="Další týden">+</button>
+    </div>
+  </div>
+
+  <div class="days-grid" id="daysGrid"></div>
+
+  <div class="mode-bar">
+    <div>
+      <div style="font-weight:700; font-size:0.9rem;">Den výkonu / Trénink</div>
+      <div style="font-size:0.75rem; color:var(--text-dim);">Aktivuje předvýkonový balíček (NO + PDE5 + klid)</div>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="perfToggle" onchange="togglePerfDay()" />
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-top">
+      <span id="progressLabel">Dnešní splnění</span>
+      <span id="progressPct">0 %</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+  </div>
+
+  <div id="checklistContainer"></div>
+
+  <div class="footer-actions">
+    <button class="btn-reset" onclick="resetCurrentDay()">Resetovat odškrtnutí pro tento den</button>
+  </div>
+
+  <script>
+    const DAYS = [
+      { id: 1, label: 'Po', weekend: false },
+      { id: 2, label: 'Út', weekend: false },
+      { id: 3, label: 'St', weekend: false },
+      { id: 4, label: 'Čt', weekend: false },
+      { id: 5, label: 'Pá', weekend: false },
+      { id: 6, label: 'So', weekend: true },
+      { id: 0, label: 'Ne', weekend: true }
+    ];
+
+    const ITEMS = [
+      {
+        id: 'm_tongkat',
+        block: '1. Ráno (s jídlem)',
+        name: 'Tongkat Ali 3 % eurykomanonů',
+        dose: '1–2 kapsle (250–500 mg)',
+        note: 'Uvolnění volného testosteronu, snížení SHBG a kortizolu.',
+        cycled: true,
+        perfOnly: false
+      },
+      {
+        id: 'm_horny',
+        block: '1. Ráno (s jídlem)',
+        name: 'Škornice šípolistá (10 % icariinu)',
+        dose: '1 kapsle (520 mg)',
+        note: 'Základní denní podpora prokrvení a vitality.',
+        cycled: true,
+        perfOnly: false
+      },
+      {
+        id: 'p_citrulline',
+        block: '2. Akutní blok (45–60 min předem)',
+        name: 'L-Citrulin (prášek)',
+        dose: '6 g čistého L-citrulinu (nebo 8 g malátu 2:1)',
+        note: 'Ve 300 ml vody. Nevzniká tolerance – lze brát i o víkendu.',
+        cycled: false,
+        perfOnly: false
+      },
+      {
+        id: 'p_pine',
+        block: '2. Akutní blok (45–60 min předem)',
+        name: 'Extrakt z borovicové kůry (90 % OPC)',
+        dose: '1 kapsle (240 mg)',
+        note: 'Zvyšuje aktivitu eNOS a násobí účinek citrulinu na tvrdost.',
+        cycled: false,
+        perfOnly: true
+      },
+      {
+        id: 'p_ginger',
+        block: '2. Akutní blok (45–60 min předem)',
+        name: 'Černý zázvor (Kaempferia parviflora)',
+        dose: '1–2 kapsle (250–500 mg)',
+        note: 'Rychlý přírodní inhibitor PDE5 pro silné prokrvení.',
+        cycled: false,
+        perfOnly: true
+      },
+      {
+        id: 'p_theanine',
+        block: '2. Akutní blok (45–60 min předem)',
+        name: 'L-Theanin',
+        dose: '1–2 kapsle (200–400 mg)',
+        note: 'Zklidnění nervové soustavy, kontrola a delší výdrž bez útlumu.',
+        cycled: false,
+        perfOnly: true
+      },
+      {
+        id: 'p_horny2',
+        block: '2. Akutní blok (45–60 min předem)',
+        name: 'Škornice šípolistá (2. dávka)',
+        dose: '1 kapsle (520 mg)',
+        note: 'Volitelný booster icariinu ve dny výkonu (Po–Pá).',
+        cycled: true,
+        perfOnly: true
+      },
+      {
+        id: 'e_ashwa',
+        block: '3. Večer (před spaním)',
+        name: 'Ashwagandha',
+        dose: '1 kapsle (300 mg)',
+        note: 'Přesunuto na večer, aby přes den netlumila dopamin a chuť.',
+        cycled: true,
+        perfOnly: false
+      }
+    ];
+
+    const STORAGE_KEY = 'vitality_stack_v1';
+    let state = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') || {
+      selectedDay: new Date().getDay(),
+      week: 1,
+      perfByDay: { 0: true, 1: true, 2: false, 3: true, 4: false, 5: true, 6: true },
+      checked: {}
+    };
+
+    function save() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function selectDay(dayId) {
+      state.selectedDay = dayId;
+      save();
+      render();
+    }
+
+    function changeWeek(delta) {
+      state.week = Math.min(9, Math.max(1, state.week + delta));
+      save();
+      render();
+    }
+
+    function togglePerfDay() {
+      state.perfByDay[state.selectedDay] = document.getElementById('perfToggle').checked;
+      save();
+      render();
+    }
+
+    function toggleItem(itemId) {
+      const key = `${state.week}_${state.selectedDay}_${itemId}`;
+      state.checked[key] = !state.checked[key];
+      save();
+      render();
+    }
+
+    function resetCurrentDay() {
+      ITEMS.forEach(it => {
+        delete state.checked[`${state.week}_${state.selectedDay}_${it.id}`];
+      });
+      save();
+      render();
+    }
+
+    function render() {
+      const dayObj = DAYS.find(d => d.id === state.selectedDay);
+      const isWeekPause = state.week === 9;
+      const isCycledPaused = isWeekPause || dayObj.weekend;
+      const isPerf = !!state.perfByDay[state.selectedDay];
+
+      document.getElementById('weekLabel').textContent = state.week;
+      const badge = document.getElementById('cycleBadge');
+      if (isWeekPause) {
+        badge.textContent = '9. týden: Kompletní pauza od bylin';
+        badge.className = 'cycle-badge badge-pause';
+      } else if (dayObj.weekend) {
+        badge.textContent = 'Víkend (So–Ne): Bylinná pauza';
+        badge.className = 'cycle-badge badge-pause';
+      } else {
+        badge.textContent = 'Aktivní fáze (Po–Pá)';
+        badge.className = 'cycle-badge badge-active';
+      }
+
+      document.getElementById('perfToggle').checked = isPerf;
+
+      // Render days
+      const daysGrid = document.getElementById('daysGrid');
+      daysGrid.innerHTML = '';
+      DAYS.forEach(d => {
+        const btn = document.createElement('button');
+        btn.className = `day-btn ${d.weekend ? 'weekend' : ''} ${d.id === state.selectedDay ? 'active' : ''}`;
+        btn.innerHTML = `<span>${d.label}</span><span class="dot"></span>`;
+        btn.onclick = () => selectDay(d.id);
+        daysGrid.appendChild(btn);
+      });
+
+      // Group items
+      const blocks = {};
+      let activeTotal = 0;
+      let activeDone = 0;
+
+      ITEMS.forEach(item => {
+        if (item.perfOnly && !isPerf) return;
+        if (!blocks[item.block]) blocks[item.block] = [];
+        const paused = item.cycled && isCycledPaused;
+        const key = `${state.week}_${state.selectedDay}_${item.id}`;
+        const isDone = !paused && !!state.checked[key];
+        if (!paused) {
+          activeTotal++;
+          if (isDone) activeDone++;
+        }
+        blocks[item.block].push({ ...item, paused, isDone });
+      });
+
+      const pct = activeTotal === 0 ? 100 : Math.round((activeDone / activeTotal) * 100);
+      document.getElementById('progressPct').textContent = `${activeDone}/${activeTotal} (${pct} %)`;
+      document.getElementById('progressFill').style.width = `${pct}%`;
+
+      const container = document.getElementById('checklistContainer');
+      container.innerHTML = '';
+      Object.keys(blocks).forEach(blockTitle => {
+        const titleEl = document.createElement('div');
+        titleEl.className = 'section-title';
+        titleEl.textContent = blockTitle;
+        container.appendChild(titleEl);
+
+        blocks[blockTitle].forEach(it => {
+          const card = document.createElement('div');
+          card.className = `item-card ${it.paused ? 'paused' : ''} ${it.isDone ? 'checked' : ''}`;
+          if (!it.paused) {
+            card.onclick = () => toggleItem(it.id);
+          }
+          card.innerHTML = `
+            <div class="checkbox">${it.paused ? '⏸' : (it.isDone ? '✓' : '')}</div>
+            <div class="item-body">
+              <div class="item-name">${it.name}</div>
+              <div class="item-dose">${it.dose}</div>
+              <div class="item-note">${it.note}</div>
+              ${it.paused ? `<span class="pause-pill">${isWeekPause ? 'PAUZA (9. týden cyklu)' : 'VÍKENDOVÁ PAUZA (5+2)'}</span>` : ''}
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>
