@@ -401,8 +401,8 @@
 
     <div class="section">
       <div class="section-head">
-        <div class="section-title">1. S prvním větším jídlem (11:00–13:00)</div>
-        <div class="section-sub">Hormonální osa &amp; základ</div>
+        <div class="section-title">1. Ráno / s prvním větším jídlem</div>
+        <div class="section-sub">Po–Pá byliny • So–Ne MAXXWIN</div>
       </div>
       <div id="blockMorning"></div>
     </div>
@@ -437,7 +437,7 @@
       </div>
       <ul class="rules-list">
         <li><strong>Nikdy ne nalačno:</strong> Tongkat Ali 3 % a Fadogii ber až po prvním jídle (prevence nevolnosti).</li>
-        <li><strong>Víkend So–Ne:</strong> Pauza od Tongkat Ali, Fadogie, Škornice i Ashwagandhy. Předvýkonový mix (Citrulin + Borovice + Černý zázvor + Theanin) můžeš použít kdykoliv.</li>
+        <li><strong>Víkend So–Ne:</strong> Pauza od Tongkat Ali, Fadogie, Škornice i večerní Ashwagandhy. Ráno místo nich dáváš <strong>MAXXWIN ranní směs (5,5 g)</strong>. Předvýkonový mix můžeš použít kdykoliv.</li>
         <li><strong>Fadogia limit:</strong> Max. 3–4 týdny v kuse (Po–Pá), pak min. 2 týdny pauza kvůli játrům.</li>
         <li><strong>Signál nízkého estradiolu:</strong> Pokud začnou nezvykle bolet/vysychat šlachy a klouby nebo klesne libido, aplikace automaticky stáhne Tongkat Ali nebo doporučí pauzu.</li>
       </ul>
@@ -492,7 +492,7 @@
       return getDateKeyOffset(targetIdx - todayIdx);
     }
 
-    let state = JSON.parse(localStorage.getItem("supp_protocol_v5") || "{}");
+    let state = JSON.parse(localStorage.getItem("supp_protocol_v6") || "{}");
     if (!state.checks) state.checks = {};
     if (!state.feelings) state.feelings = {};
     if (typeof state.trainingDay !== "boolean") state.trainingDay = true;
@@ -500,7 +500,7 @@
     if (typeof state.fadogiaManualOff !== "boolean") state.fadogiaManualOff = false;
 
     function saveState() {
-      localStorage.setItem("supp_protocol_v5", JSON.stringify(state));
+      localStorage.setItem("supp_protocol_v6", JSON.stringify(state));
     }
 
     function selectDay(idx) {
@@ -509,7 +509,6 @@
     }
 
     function evaluateProtocol() {
-      // Sběr posledních 3 dnů se zapsanými pocity (včetně vybraného dne)
       const keys = [
         getDateKeyForDayIdx(selectedIdx),
         getDateKeyOffset(-1),
@@ -539,7 +538,6 @@
       const lowLibidoDays = entries.filter(f => f.libido === 1).length;
       const lowEnergyDays = entries.filter(f => f.energy === 1).length;
 
-      // 1. Priorita: Bolest kloubů nebo kombinace citlivých kloubů + poklesu libida (nízký estradiol)
       if (current.joints === 3 || jointPainDays >= 1 || (jointSensitiveDays >= 2 && lowLibidoDays >= 1)) {
         return {
           mode: "mode-danger",
@@ -552,7 +550,6 @@
         };
       }
 
-      // 2. Citlivé klouby nebo pokles libida -> stažení Tongkat Ali na 1 kapsli
       if (current.joints === 2 || jointSensitiveDays >= 1 || lowLibidoDays >= 2) {
         return {
           mode: "mode-warn",
@@ -565,7 +562,6 @@
         };
       }
 
-      // 3. Nízká energie + nízké libido (2+ dny) -> možná otupělost z Ashwagandhy (anhedonie)
       if (lowEnergyDays >= 2 && lowLibidoDays >= 1) {
         return {
           mode: "mode-warn",
@@ -578,7 +574,6 @@
         };
       }
 
-      // 4. Optimální stav
       if (current.energy === 3 && current.libido === 3 && (current.joints === 1 || current.joints === 0)) {
         return {
           mode: "mode-good",
@@ -649,6 +644,15 @@
             note: "Základní denní hladina icariinu. Rozmíchat ve vodě nebo džusu.",
             paused: isSelectedWeekend,
             pauseReason: "Víkendová pauza (5+2)"
+          },
+          {
+            id: "maxxwin_weekend",
+            name: "MAXXWIN Ranní nápoj (Guarana, Maca, Ashwa, Vit. C)",
+            dose: "5,5 g (1 odměrka do vody)",
+            adjusted: true,
+            note: "Víkendový udržovák (330 mg Guarana, 220 mg Maca, 220 mg Ashwagandha, 330 mg Vit. C). V týdnu vynecháváš, ať se nedubluje Ashwagandha.",
+            paused: !isSelectedWeekend,
+            pauseReason: "Pouze o víkendu (So–Ne)"
           }
         ],
         pre: [
@@ -672,10 +676,10 @@
           },
           {
             id: "ginger",
-            name: "Černý zázvor (KaempMax®)",
-            dose: "1 kapsle (100 mg)",
+            name: "Kenay Černý zázvor (SIRTMAX®)",
+            dose: "1–2 kapsle (100–200 mg)",
             adjusted: false,
-            note: "Přírodní inhibice PDE5 (5,7-dimethoxyflavon), synergie se Škornicí.",
+            note: "15 % polymethoxyflavonů (inhibice PDE5). Před náročným večerem dej 2 kapsle.",
             paused: !state.trainingDay,
             pauseReason: "Volný den (nepovinné)"
           },
@@ -810,7 +814,7 @@
 
       const cycleEl = document.getElementById("cycleStatus");
       if (isSelectedWeekend) {
-        cycleEl.innerHTML = `<span style="color:var(--warn)">● Pauza (So–Ne)</span>`;
+        cycleEl.innerHTML = `<span style="color:var(--warn)">● Víkend (MAXXWIN)</span>`;
       } else {
         cycleEl.innerHTML = `<span style="color:var(--accent)">● Aktivní den (Po–Pá)</span>`;
       }
@@ -861,4 +865,4 @@
     render();
   </script>
 </body>
-</html>f
+</html>
