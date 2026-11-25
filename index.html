@@ -450,8 +450,8 @@
     <!-- BLOK 1 -->
     <div class="section">
       <div class="section-head">
-        <div class="section-title">1. Ráno / s prvním větším jídlem</div>
-        <div class="section-sub">Po–Pá byliny • So–Ne MAXXWIN</div>
+        <div class="section-title">1. Ráno po snídani</div>
+        <div class="section-sub">Po–Pá byliny &amp; základ • So–Ne MAXXWIN</div>
       </div>
       <div id="blockMorning"></div>
     </div>
@@ -497,9 +497,9 @@
         <div class="section-title">Bezpečnostní pojistky</div>
       </div>
       <ul class="rules-list">
-        <li><strong>Nikdy ne nalačno:</strong> Tongkat Ali 3 % a Fadogii ber až po prvním jídle (prevence nevolnosti).</li>
+        <li><strong>Nikdy ne nalačno:</strong> Tongkat Ali 3 %, Fadogii a Zinek ber až po snídani (prevence nevolnosti).</li>
         <li><strong>Odměrka 0,5 ml = ~250 mg prášku:</strong> U Škornice a L-Theaninu proto 0,5 g odpovídá 2 zarovnaným 0,5ml odměrkám.</li>
-        <li><strong>Víkend So–Ne:</strong> Pauza od Tongkat Ali, Fadogie, Škornice i večerní Ashwagandhy. Ráno místo nich dáváš <strong>MAXXWIN ranní směs (5,5 g)</strong>. Předvýkonový mix můžeš použít kdykoliv.</li>
+        <li><strong>Víkend So–Ne:</strong> Pauza od Tongkat Ali, Fadogie, Škornice, Bóru i večerní Ashwagandhy. Ráno místo nich dáváš <strong>MAXXWIN ranní směs (5,5 g)</strong> + D3+K2, Zinek a Boswellii.</li>
         <li><strong>Fadogia limit:</strong> Max. 3–4 týdny v kuse (Po–Pá), pak min. 2 týdny pauza kvůli játrům.</li>
       </ul>
     </div>
@@ -553,7 +553,7 @@
       return getDateKeyOffset(targetIdx - todayIdx);
     }
 
-    let state = JSON.parse(localStorage.getItem("supp_protocol_v7") || "{}");
+    let state = JSON.parse(localStorage.getItem("supp_protocol_v8") || "{}");
     if (!state.checks) state.checks = {};
     if (!state.feelings) state.feelings = {};
     if (!state.dayModes) state.dayModes = {};
@@ -561,12 +561,12 @@
     if (typeof state.fadogiaManualOff !== "boolean") state.fadogiaManualOff = false;
 
     function saveState() {
-      localStorage.setItem("supp_protocol_v7", JSON.stringify(state));
+      localStorage.setItem("supp_protocol_v8", JSON.stringify(state));
     }
 
     function getSelectedDayMode() {
       const key = getDateKeyForDayIdx(selectedIdx);
-      return state.dayModes[key] || "train"; // 'train' | 'split' | 'rest'
+      return state.dayModes[key] || "train";
     }
 
     function setDayMode(mode) {
@@ -670,4 +670,400 @@
       };
     }
 
-    function getFadogiaCycleInfo(isSelectedWe
+    function getFadogiaCycleInfo(isSelectedWeekend) {
+      const start = new Date(state.fadogiaStart + "T00:00:00");
+      const diffDays = Math.max(0, Math.floor((now - start) / (1000 * 60 * 60 * 24)));
+      const cycleDay = (diffDays % 35) + 1;
+      const autoOff = cycleDay > 21;
+      const isOff = state.fadogiaManualOff || autoOff || isSelectedWeekend;
+      return { cycleDay, autoOff, isOff };
+    }
+
+    function getItems(isSelectedWeekend, advice, dayMode) {
+      const fadogiaInfo = getFadogiaCycleInfo(isSelectedWeekend);
+      const isSplit = (dayMode === "split");
+      const isRest = (dayMode === "rest");
+
+      let tongkatDose = "1–2 kapsle (250–500 mg)";
+      let tongkatAdjusted = false;
+      if (advice.reduceTongkat) {
+        tongkatDose = "1 kapsle (250 mg) • snížená dávka";
+        tongkatAdjusted = true;
+      }
+
+      const morning = [
+        {
+          id: "tongkat",
+          name: "Tongkat Ali 3 % (SOMA HERB)",
+          dose: tongkatDose,
+          adjusted: tongkatAdjusted,
+          note: "Po snídani. Snižuje SHBG a kortizol, zvedá volný testosteron.",
+          paused: isSelectedWeekend || advice.pauseTongkat,
+          pauseReason: isSelectedWeekend ? "Víkendová pauza (5+2)" : "Auto-pauza (klouby/E2)"
+        },
+        {
+          id: "fadogia",
+          name: "Fadogia Agrestis",
+          dose: "1 kapsle (500–600 mg)",
+          adjusted: false,
+          note: "Stimulace LH a objemu. Cyklus 3 týdny Po–Pá, pak 2 týdny pauza.",
+          paused: fadogiaInfo.isOff,
+          pauseReason: isSelectedWeekend ? "Víkendová pauza" : "2týdenní pauza cyklu"
+        },
+        {
+          id: "skornice_am",
+          name: "Škornice 10 % icariin (prášek)",
+          dose: "0,5 g (2 zarovnané 0,5ml odměrky)",
+          adjusted: false,
+          note: "Základní denní hladina icariinu (1 odměrka ≈ 250 mg). Rozmíchat ve vodě nebo džusu.",
+          paused: isSelectedWeekend,
+          pauseReason: "Víkendová pauza (5+2)"
+        },
+        {
+          id: "boron_am",
+          name: "Warrior Boron (Bór)",
+          dose: "1 kapsle (3–6 mg dle etikety)",
+          adjusted: false,
+          note: "Snižuje SHBG a posiluje účinek Tongkat Ali. O víkendu pauza (cyklus 5+2).",
+          paused: isSelectedWeekend,
+          pauseReason: "Víkendová pauza (5+2)"
+        },
+        {
+          id: "d3k2_am",
+          name: "SFD D3 4000 IU + K2",
+          dose: "1 tableta po snídani",
+          adjusted: false,
+          note: "Hormonální základ a imunita – tuk ze snídaně zajistí plné vstřebání.",
+          paused: false
+        },
+        {
+          id: "zinc_am",
+          name: "AllNutrition Zinc Forte",
+          dose: "1 tableta (nebo 1/2 dle mg)",
+          adjusted: false,
+          note: "Tvorba testosteronu a objem ejakulátu. Vždy po snídani (nikdy nalačno).",
+          paused: false
+        },
+        {
+          id: "boswellia_am",
+          name: "Swanson Full Spectrum Boswellia",
+          dose: "1 kapsle",
+          adjusted: false,
+          note: "Ochrana kloubů a šlach při těžkém tréninku a užívání Tongkat Ali.",
+          paused: false
+        },
+        {
+          id: "maxxwin_weekend",
+          name: "MAXXWIN Ranní nápoj (Guarana, Maca, Ashwa, Vit. C)",
+          dose: "5,5 g (1 odměrka do vody)",
+          adjusted: true,
+          note: "Víkendový udržovák (330 mg Guarana, 220 mg Maca, 220 mg Ashwagandha, 330 mg Vit. C). V týdnu vynecháváš.",
+          paused: !isSelectedWeekend,
+          pauseReason: "Pouze o víkendu (So–Ne)"
+        }
+      ];
+
+      let pre = [];
+      let dateNight = [];
+
+      if (isSplit) {
+        pre = [
+          {
+            id: "citrulin_train",
+            name: "L-Citrulin (1. dávka před tréninkem)",
+            dose: "5–6 g čistý (nebo 7–8 g malát)",
+            adjusted: false,
+            note: "Svalová pumpa a prokrvení na trénink (druhou část necháváš na večer).",
+            paused: false
+          },
+          {
+            id: "pine_train",
+            name: "Borovicová kůra (90 % OPC)",
+            dose: "1 kapsle (240 mg)",
+            adjusted: false,
+            note: "Aktivuje eNOS enzym na celé odpoledne i večer.",
+            paused: false
+          },
+          {
+            id: "theanine_train",
+            name: "BrainMax L-Theanine (1. dávka)",
+            dose: "200 mg (1 zarovnaná 0,5ml odměrka)",
+            adjusted: false,
+            note: "Čistý fokus na těžké série bez přestimulování.",
+            paused: false
+          }
+        ];
+
+        dateNight = [
+          {
+            id: "citrulin_night",
+            name: "L-Citrulin (2. večerní dávka)",
+            dose: "4–5 g čistý (nebo 6 g malát)",
+            adjusted: true,
+            purple: true,
+            note: "Čerstvá vlna oxidu dusnatého (NO) 45–60 min před večerem.",
+            paused: false
+          },
+          {
+            id: "ginger_night",
+            name: "Kenay Černý zázvor (SIRTMAX®)",
+            dose: "1–2 kapsle (100–200 mg)",
+            adjusted: true,
+            purple: true,
+            note: "15 % polymethoxyflavonů (inhibice PDE5). Před delším večerem dej 2 kapsle.",
+            paused: false
+          },
+          {
+            id: "skornice_night",
+            name: "Škornice 10 % icariin (2. dávka)",
+            dose: "0,5 g (2 zarovnané 0,5ml odměrky)",
+            adjusted: true,
+            purple: true,
+            note: "Synergie icariinu s Černým zázvorem na tvrdost a výdrž (jen Po–Pá).",
+            paused: isSelectedWeekend,
+            pauseReason: "Víkendová pauza (5+2)"
+          },
+          {
+            id: "theanine_night",
+            name: "BrainMax L-Theanine (2. dávka)",
+            dose: "200 mg (1 zarovnaná 0,5ml odměrka)",
+            adjusted: true,
+            purple: true,
+            note: "Uvolnění hlavy, klid a lepší kontrola nad tempem.",
+            paused: false
+          }
+        ];
+      } else {
+        pre = [
+          {
+            id: "citrulin",
+            name: "L-Citrulin (prášek)",
+            dose: "6–8 g čistý (nebo 8–10 g malát)",
+            adjusted: false,
+            note: "Hlavní motor oxidu dusnatého (NO), prokrvení, erekce a pumpa.",
+            paused: isRest,
+            pauseReason: "Volný den (nepovinné)"
+          },
+          {
+            id: "pine",
+            name: "Borovicová kůra (90 % OPC)",
+            dose: "1 kapsle (240 mg)",
+            adjusted: false,
+            note: "Aktivuje eNOS enzym a prodlužuje účinek L-Citrulinu.",
+            paused: isRest,
+            pauseReason: "Volný den (nepovinné)"
+          },
+          {
+            id: "ginger",
+            name: "Kenay Černý zázvor (SIRTMAX®)",
+            dose: "1–2 kapsle (100–200 mg)",
+            adjusted: false,
+            note: "15 % polymethoxyflavonů (inhibice PDE5). Před náročným večerem dej 2 kapsle.",
+            paused: isRest,
+            pauseReason: "Volný den (nepovinné)"
+          },
+          {
+            id: "theanine",
+            name: "BrainMax L-Theanine (prášek)",
+            dose: advice.boostTheanine ? "400 mg (2 odměrky) • zvýšeno" : "200–400 mg (1–2 odměrky)",
+            adjusted: advice.boostTheanine,
+            note: "Klidný fokus, tlumí nervozitu a stresový blok. Přisypat do sklenice k Citrulinu.",
+            paused: false
+          },
+          {
+            id: "skornice_pre",
+            name: "Škornice 10 % icariin (2. dávka)",
+            dose: "0,5 g (2 zarovnané 0,5ml odměrky)",
+            adjusted: false,
+            note: "Volitelný booster před těžkým tréninkem nebo večerem (jen Po–Pá).",
+            paused: isSelectedWeekend || isRest,
+            pauseReason: isSelectedWeekend ? "Víkendová pauza" : "Volný den"
+          }
+        ];
+      }
+
+      const evening = [
+        {
+          id: "ashwa",
+          name: "Hepatica Fermentovaná Ashwagandha",
+          dose: "1 kapsle před spaním",
+          adjusted: false,
+          note: "Snížení večerního kortizolu a hlubší spánek. Víkend pauza (v So–Ne ji máš v MAXXWIN).",
+          paused: isSelectedWeekend || advice.pauseAshwa,
+          pauseReason: isSelectedWeekend ? "Víkendová pauza (5+2)" : "Auto-pauza (únava/drive)"
+        }
+      ];
+
+      return { morning, pre, dateNight, evening };
+    }
+
+    function toggleCheck(id) {
+      const key = getDateKeyForDayIdx(selectedIdx);
+      if (!state.checks[key]) state.checks[key] = {};
+      state.checks[key][id] = !state.checks[key][id];
+      saveState();
+      render();
+    }
+
+    function cycleFeeling(metric) {
+      const key = getDateKeyForDayIdx(selectedIdx);
+      if (!state.feelings[key]) state.feelings[key] = { energy: 0, libido: 0, joints: 0 };
+      const maxLen = FEELING_DEFS[metric].states.length;
+      state.feelings[key][metric] = ((state.feelings[key][metric] || 0) + 1) % maxLen;
+      saveState();
+      render();
+    }
+
+    function toggleFadogiaManual() {
+      state.fadogiaManualOff = !state.fadogiaManualOff;
+      saveState();
+      render();
+    }
+
+    function resetSelectedDay() {
+      const key = getDateKeyForDayIdx(selectedIdx);
+      state.checks[key] = {};
+      state.feelings[key] = { energy: 0, libido: 0, joints: 0 };
+      saveState();
+      render();
+    }
+
+    function renderBlock(containerId, items, dayKey) {
+      const el = document.getElementById(containerId);
+      const dayChecks = state.checks[dayKey] || {};
+      el.innerHTML = items.map(item => {
+        const checked = !!dayChecks[item.id];
+        const doseCls = item.purple ? "purple" : (item.adjusted ? "adjusted" : "");
+        return `
+          <div class="item ${checked ? "checked" : ""} ${item.paused ? "off-day" : ""}" onclick="toggleCheck('${item.id}')">
+            <div class="checkbox">${checked ? "✓" : ""}</div>
+            <div class="item-body">
+              <div class="item-top">
+                <span class="item-name">${item.name}</span>
+                ${item.paused
+                  ? `<span class="tag-pause">${item.pauseReason}</span>`
+                  : `<span class="item-dose ${doseCls}">${item.dose}</span>`
+                }
+              </div>
+              <div class="item-note">${item.note}</div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderFeelings(dayKey) {
+      const dayFeel = state.feelings[dayKey] || { energy: 0, libido: 0, joints: 0 };
+      const grid = document.getElementById("feelingsGrid");
+
+      grid.innerHTML = Object.keys(FEELING_DEFS).map(metric => {
+        const def = FEELING_DEFS[metric];
+        const idx = dayFeel[metric] || 0;
+        const st = def.states[idx];
+        return `
+          <button type="button" class="feel-btn ${st.cls}" onclick="cycleFeeling('${metric}')">
+            <span class="feel-label">${def.label}</span>
+            <span class="feel-val">${st.text}</span>
+          </button>
+        `;
+      }).join("");
+    }
+
+    function render() {
+      const selectedDate = new Date(now);
+      selectedDate.setDate(now.getDate() + (selectedIdx - todayIdx));
+      const isSelectedWeekend = (selectedIdx >= 5);
+      const dayKey = getDateKeyForDayIdx(selectedIdx);
+      const dayMode = getSelectedDayMode();
+
+      document.getElementById("dateBadge").textContent =
+        `${DAYS_FULL[selectedIdx]} ${selectedDate.getDate()}. ${selectedDate.getMonth() + 1}.` +
+        (selectedIdx === todayIdx ? " (dnes)" : "");
+
+      document.getElementById("dayTabs").innerHTML = DAYS_SHORT.map((label, idx) => {
+        const classes = [
+          "day-tab",
+          idx === todayIdx ? "today" : "",
+          idx === selectedIdx ? "active" : "",
+          idx >= 5 ? "weekend" : ""
+        ].filter(Boolean).join(" ");
+        return `<div class="${classes}" onclick="selectDay(${idx})">${label}</div>`;
+      }).join("");
+
+      document.getElementById("btnModeTrain").classList.toggle("active", dayMode === "train");
+      document.getElementById("btnModeSplit").classList.toggle("active", dayMode === "split");
+      document.getElementById("btnModeRest").classList.toggle("active", dayMode === "rest");
+
+      const cycleEl = document.getElementById("cycleStatus");
+      if (isSelectedWeekend) {
+        cycleEl.innerHTML = `<span style="color:var(--warn)">● Víkend (MAXXWIN)</span>`;
+      } else {
+        cycleEl.innerHTML = `<span style="color:var(--accent)">● Aktivní den (Po–Pá)</span>`;
+      }
+
+      const advice = evaluateProtocol();
+      const advBox = document.getElementById("advisorBox");
+      advBox.className = `advisor-box ${advice.mode}`;
+      document.getElementById("advisorTitle").textContent = advice.title;
+      document.getElementById("advisorText").textContent = advice.text;
+
+      const fInfo = getFadogiaCycleInfo(isSelectedWeekend);
+      const fTitle = document.getElementById("fadogiaTitle");
+      const fSub = document.getElementById("fadogiaSub");
+      const fBar = document.getElementById("fadogiaBar");
+      const fBtn = document.getElementById("btnFadogiaPause");
+
+      fBtn.classList.toggle("active", state.fadogiaManualOff);
+      fBtn.textContent = state.fadogiaManualOff ? "Pauza zapnuta" : "Vynutit pauzu";
+
+      if (state.fadogiaManualOff) {
+        fTitle.textContent = "Fadogia Agrestis: Manuální pauza";
+        fSub.textContent = "Pozastaveno – klikni pro obnovení cyklu";
+        fBar.style.width = "0%";
+      } else if (fInfo.autoOff) {
+        fTitle.textContent = `Fadogia Agrestis: Povinná pauza (den ${fInfo.cycleDay - 21}/14)`;
+        fSub.textContent = "2 týdny regenerace po 3týdenním bloku";
+        fBar.style.width = `${Math.round(((fInfo.cycleDay - 21) / 14) * 100)}%`;
+      } else {
+        fTitle.textContent = `Fadogia Agrestis: Aktivní blok (den ${fInfo.cycleDay}/21)`;
+        fSub.textContent = isSelectedWeekend ? "Víkendová pauza (Po–Pá aktivní)" : "3 týdny ON (Po–Pá) → poté 2 týdny OFF";
+        fBar.style.width = `${Math.round((fInfo.cycleDay / 21) * 100)}%`;
+      }
+
+      const secDateNight = document.getElementById("sectionDateNight");
+      if (dayMode === "split") {
+        document.getElementById("preBlockTitle").textContent = "2A. 45–60 min před tréninkem (1. vlna)";
+        document.getElementById("preBlockSub").textContent = "Svalová pumpa & fokus";
+        secDateNight.style.display = "block";
+        document.getElementById("eveningBlockTitle").textContent = "3. Večer před spaním";
+      } else {
+        document.getElementById("preBlockTitle").textContent = "2. 45–60 min před tréninkem / výkonem";
+        document.getElementById("preBlockSub").textContent = "NO pumpa, PDE5 & fokus";
+        secDateNight.style.display = "none";
+        document.getElementById("eveningBlockTitle").textContent = "3. Večer před spaním";
+      }
+
+      const items = getItems(isSelectedWeekend, advice, dayMode);
+      renderBlock("blockMorning", items.morning, dayKey);
+      renderBlock("blockPre", items.pre, dayKey);
+      if (dayMode === "split") {
+        renderBlock("blockDateNight", items.dateNight, dayKey);
+      }
+      renderBlock("blockEvening", items.evening, dayKey);
+      renderFeelings(dayKey);
+
+      const dayChecks = state.checks[dayKey] || {};
+      const activeList = [
+        ...items.morning,
+        ...items.pre,
+        ...(dayMode === "split" ? items.dateNight : []),
+        ...items.evening
+      ].filter(i => !i.paused);
+      const doneCount = activeList.filter(i => dayChecks[i.id]).length;
+      document.getElementById("progressStatus").textContent = `${doneCount} / ${activeList.length} položek`;
+    }
+
+    render();
+  </script>
+</body>
+</html>
